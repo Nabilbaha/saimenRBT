@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="ms" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Dunia Reka Bentuk Elektronik - AR Komponen + AI Chatbot</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Exo+2:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    /* CSS Grid untuk crossword */
+    .crossword-grid {
+      display: grid;
+      grid-template-columns: repeat(15, 40px);
+      gap: 3px;
+      justify-content: center;
+      overflow-x: auto;
+      padding: 20px 0;
+    }
+    .crossword-cell {
+      width: 40px;
+      height: 40px;
+      border: 2px solid #00d4ff33;
+      background: #111827;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+      color: #00d4ff;
+      text-transform: uppercase;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+    .crossword-cell.black {
+      background: #1a1a2e;
+      border-color: #1a1a2e;
+    }
+    .crossword-cell:focus {
+      outline: none;
+      border-color: #00d4ff;
+      box-shadow: 0 0 15px rgba(0,212,255,0.3);
+      transform: scale(1.05);
+    }
+    .crossword-cell.highlight {
+      background: #00d4ff22;
+      border-color: #00d4ff;
+    }
+    .clue-section {
+      background: #111827cc;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .clue-item {
+      padding: 8px;
+      margin: 5px 0;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-radius: 8px;
+    }
+    .clue-item:hover {
+      background: #00d4ff22;
+      transform: translateX(5px);
+    }
+    .clue-item.active {
+      background: #00d4ff33;
+      border-left: 4px solid #00d4ff;
+    }
+    .crossword-cell.correct {
+      background: #22c55e22;
+      border-color: #22c55e;
+      color: #22c55e;
+    }
+    /* AR Card 3D effect */
+    .ar-card {
+      perspective: 1000px;
+      transform-style: preserve-3d;
+      transition: transform 0.5s ease;
+    }
+    .ar-card:hover {
+      transform: translateY(-8px) rotateX(5deg);
+    }
+    .component-badge {
+      background: linear-gradient(135deg, rgba(0,212,255,0.2), rgba(0,212,255,0.05));
+      backdrop-filter: blur(4px);
+    }
+    .ar-scan-animation {
+      position: relative;
+      overflow: hidden;
+    }
+    .ar-scan-animation::after {
+      content: '';
+      position: absolute;
+      top: -100%;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(180deg, transparent, rgba(0,212,255,0.2), transparent);
+      animation: scan 3s ease-in-out infinite;
+    }
+    @keyframes scan {
+      0% { top: -100%; }
+      100% { top: 100%; }
+    }
+    .flip-card {
+      background: transparent;
+      perspective: 1000px;
+    }
+    .flip-card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      text-align: center;
+      transition: transform 0.6s;
+      transform-style: preserve-3d;
+    }
+    .flip-card:hover .flip-card-inner {
+      transform: rotateY(180deg);
+    }
+    .flip-front, .flip-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 1rem;
+    }
+    .flip-back {
+      transform: rotateY(180deg);
+    }
+    @media (max-width: 768px) {
+      .crossword-grid {
+        grid-template-columns: repeat(15, 30px);
+        gap: 2px;
+      }
+      .crossword-cell {
+        width: 30px;
+        height: 30px;
+        font-size: 14px;
+      }
+    }
+    /* Custom scroll & chatbot float */
+    html, body { height: 100%; margin: 0; scroll-behavior: smooth; }
+    .glow-text { text-shadow: 0 0 20px rgba(0,212,255,0.5), 0 0 40px rgba(0,212,255,0.3); }
+    .glow-box { box-shadow: 0 0 15px rgba(0,212,255,0.2), inset 0 0 15px rgba(0,212,255,0.05); }
+    .glow-border { border: 1px solid rgba(0,212,255,0.3); }
+    .circuit-bg {
+      background-image: 
+        linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .card-hover { transition: all 0.3s ease; }
+    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 0 25px rgba(0,212,255,0.3); }
+    .fade-in { animation: fadeIn 0.8s ease forwards; opacity: 0; }
+    @keyframes fadeIn { to { opacity: 1; } }
+    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    .float-anim { animation: float 3s ease-in-out infinite; }
+    @keyframes pulse-glow { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+    .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+    .nav-link { position: relative; }
+    .nav-link::after { content:''; position:absolute; bottom:-2px; left:0; width:0; height:2px; background:#00d4ff; transition: width 0.3s; }
+    .nav-link:hover::after { width:100%; }
+    .accordion-content { max-height:0; overflow:hidden; transition: max-height 0.4s ease; }
+    .accordion-content.open { max-height: 1000px; }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #0a0e1a; }
+    ::-webkit-scrollbar-thumb { background: #00d4ff33; border-radius: 4px; }
+
+    /* Chatbot bubble styles */
+    .chatbot-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 999;
+      font-family: 'Exo 2', sans-serif;
+    }
+    .chatbot-toggle {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, #00d4ff, #0e6cff);
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(0,212,255,0.4);
+      transition: 0.2s ease;
+      border: none;
+    }
+    .chatbot-toggle:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px #00d4ffaa;
+    }
+    .chatbot-window {
+      position: absolute;
+      bottom: 80px;
+      right: 0;
+      width: 340px;
+      height: 500px;
+      background: #0f172ad9;
+      backdrop-filter: blur(12px);
+      border-radius: 28px;
+      border: 1px solid rgba(0,212,255,0.5);
+      box-shadow: 0 25px 40px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: all 0.2s ease;
+    }
+    .chatbot-header {
+      background: #0a0e1acc;
+      padding: 14px 16px;
+      border-bottom: 1px solid #00d4ff33;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #00d4ff;
+    }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .message {
+      max-width: 85%;
+      padding: 10px 14px;
+      border-radius: 18px;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    .user-msg {
+      align-self: flex-end;
+      background: #00d4ff22;
+      border: 1px solid #00d4ff55;
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+    .bot-msg {
+      align-self: flex-start;
+      background: #1e293bdd;
+      border: 1px solid #2dd4bf55;
+      color: #cbd5e6;
+      border-bottom-left-radius: 4px;
+    }
+    .chat-input-area {
+      display: flex;
+      border-top: 1px solid #00d4ff33;
+      background: #0a0e1acc;
+      padding: 12px;
+      gap: 8px;
+    }
+    .chat-input-area input {
+      flex: 1;
+      background: #111827;
+      border: 1px solid #2dd4bf55;
+      border-radius: 40px;
+      padding: 10px 14px;
+      color: white;
+      outline: none;
+      font-size: 14px;
+    }
+    .chat-input-area button {
+      background: #00d4ff33;
+      border: none;
+      border-radius: 40px;
+      padding: 0 16px;
+      color: #00d4ff;
+      cursor: pointer;
+      transition: 0.2s;
+      font-weight: bold;
+    }
+    .chat-input-area button:hover {
+      background: #00d4ff66;
+      color: white;
+    }
+    @media (max-width: 480px) {
+      .chatbot-window { width: 300px; right: 0; bottom: 75px; height: 460px; }
+    }
+  </style>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            orbitron: ['Orbitron', 'sans-serif'],
+            exo: ['Exo 2', 'sans-serif']
+          },
+          colors: {
+            cyber: { dark: '#0a0e1a', mid: '#111827', light: '#1e293b' },
+            neon: { blue: '#00d4ff', cyan: '#22d3ee', purple: '#a855f7' }
+          }
+        }
+      }
+    }
+  </script>
+   <style>
+    html, body { height: 100%; margin: 0; scroll-behavior: smooth; }
+    .glow-text { text-shadow: 0 0 20px rgba(0,212,255,0.5), 0 0 40px rgba(0,212,255,0.3); }
+    .glow-box { box-shadow: 0 0 15px rgba(0,212,255,0.2), inset 0 0 15px rgba(0,212,255,0.05); }
+    .glow-border { border: 1px solid rgba(0,212,255,0.3); }
+    .circuit-bg {
+      background-image: 
+        linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .card-hover { transition: all 0.3s ease; }
+    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 0 25px rgba(0,212,255,0.3); }
+    .fade-in { animation: fadeIn 0.8s ease forwards; opacity: 0; }
+    @keyframes fadeIn { to { opacity: 1; } }
+    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    .float-anim { animation: float 3s ease-in-out infinite; }
+    @keyframes pulse-glow { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+    .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+    .nav-link { position: relative; }
+    .nav-link::after { content:''; position:absolute; bottom:-2px; left:0; width:0; height:2px; background:#00d4ff; transition: width 0.3s; }
+    .nav-link:hover::after { width:100%; }
+    .accordion-content { max-height:0; overflow:hidden; transition: max-height 0.4s ease; }
+    .accordion-content.open { max-height: 1000px; }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #0a0e1a; }
+    ::-webkit-scrollbar-thumb { background: #00d4ff33; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-cyber-dark font-exo text-gray-200">
+
+<!-- navigasi -->
+<nav id="navbar" class="fixed top-0 left-0 right-0 z-50 bg-cyber-dark/90 backdrop-blur-md border-b border-cyan-900/30 transition-all duration-300">
+   <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+     <a href="#hero" class="font-orbitron text-lg font-bold text-neon-blue glow-text">⚡ RBT Elektronik</a>
+     <button id="mobile-menu-btn" class="md:hidden text-cyan-400"><i data-lucide="menu" class="w-6 h-6"></i></button>
+     <ul id="nav-links" class="hidden md:flex gap-6 text-sm font-medium">
+       <li><a href="#hero" class="nav-link text-cyan-300 hover:text-white">Utama</a></li>
+       <li><a href="#nota" class="nav-link text-cyan-300 hover:text-white">Nota</a></li>
+       <li><a href="#ar-components" class="nav-link text-cyan-300 hover:text-white">AR Komponen</a></li>
+       <li><a href="#kuiz" class="nav-link text-cyan-300 hover:text-white">Kuiz</a></li>
+       <li><a href="#crossword" class="nav-link text-cyan-300 hover:text-white">Crossword</a></li>
+       <li><a href="#footer" class="nav-link text-cyan-300 hover:text-white">Hubungi</a></li>
+     </ul>
+   </div>
+   <div id="mobile-nav" class="hidden md:hidden px-4 pb-4">
+     <ul class="flex flex-col gap-3 text-sm">
+       <li><a href="#hero" class="text-cyan-300 hover:text-white">Utama</a></li>
+       <li><a href="#nota" class="text-cyan-300 hover:text-white">Nota</a></li>
+       <li><a href="#ar-components" class="text-cyan-300 hover:text-white">AR Komponen</a></li>
+       <li><a href="#kuiz" class="text-cyan-300 hover:text-white">Kuiz</a></li>
+       <li><a href="#crossword" class="text-cyan-300 hover:text-white">Crossword</a></li>
+       <li><a href="#footer" class="text-cyan-300 hover:text-white">Hubungi</a></li>
+     </ul>
+   </div>
+ </nav>
+
+ <!-- Hero Section -->
+ <section id="hero" class="relative min-h-screen circuit-bg flex items-center justify-center pt-20 px-4 overflow-hidden">
+   <div class="absolute top-20 left-10 w-20 h-20 border border-cyan-500/20 rounded-full float-anim" style="animation-delay:0.5s"></div>
+   <div class="absolute bottom-20 right-10 w-32 h-32 border border-cyan-500/10 rounded-full float-anim" style="animation-delay:1s"></div>
+   <div class="absolute top-40 right-20 w-3 h-3 bg-cyan-400 rounded-full pulse-glow"></div>
+   <div class="absolute bottom-40 left-20 w-2 h-2 bg-blue-400 rounded-full pulse-glow" style="animation-delay:1s"></div>
+   <svg class="absolute inset-0 w-full h-full opacity-10 pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+     <line x1="0" y1="30%" x2="20%" y2="30%" stroke="#00d4ff" stroke-width="1" />
+     <circle cx="20%" cy="30%" r="4" fill="#00d4ff" />
+     <line x1="20%" y1="30%" x2="20%" y2="60%" stroke="#00d4ff" stroke-width="1" />
+     <circle cx="20%" cy="60%" r="3" fill="#22d3ee" />
+     <line x1="80%" y1="20%" x2="80%" y2="50%" stroke="#00d4ff" stroke-width="1" />
+     <circle cx="80%" cy="50%" r="4" fill="#00d4ff" />
+     <line x1="80%" y1="50%" x2="100%" y2="50%" stroke="#00d4ff" stroke-width="1" />
+   </svg>
+   <div class="relative z-10 max-w-4xl text-center fade-in">
+     <div class="mb-6 flex justify-center gap-4">
+       <span class="text-4xl float-anim">🔌</span>
+       <span class="text-4xl float-anim" style="animation-delay:0.3s">💡</span>
+       <span class="text-4xl float-anim" style="animation-delay:0.6s">🤖</span>
+       <span class="text-4xl float-anim" style="animation-delay:0.9s">⚡</span>
+     </div>
+     <h1 class="font-orbitron text-4xl md:text-6xl font-black text-white glow-text mb-6 leading-tight">Dunia Reka Bentuk Elektronik</h1>
+     <p class="text-base md:text-lg text-cyan-100/80 leading-relaxed max-w-3xl mx-auto mb-8">Selamat datang ke Dunia Reka Bentuk Elektronik! Pernahkah anda terfikir bagaimana lampu menyala secara automatik... Laman web ini direka khas untuk memudahkan pelajar RBT Tingkatan 2 menerokai topik 2.4 Reka Bentuk Elektronik. Jom pelajari mikropengawal, mikropemproses, dan komponen elektronik!</p>
+     <a href="#nota" class="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold px-8 py-4 rounded-full hover:scale-105 transition-transform shadow-lg shadow-cyan-500/30"> 
+       <i data-lucide="play" class="w-5 h-5"></i> Mula Belajar 
+     </a>
+   </div>
+ </section>
+
+ <!-- Nota Pembelajaran -->
+ <section id="nota" class="py-20 px-4 circuit-bg">
+   <div class="max-w-6xl mx-auto">
+    <h2 class="font-orbitron text-3xl md:text-4xl font-bold text-center text-white glow-text mb-4">📚 Nota Pembelajaran</h2>
+    <p class="text-center text-cyan-300/70 mb-12">Topik 2.4 Reka Bentuk Elektronik</p>
+    <div class="grid md:grid-cols-3 gap-6 mb-12">
+	</div><!-- Accordion -->
+    <div class="space-y-3 max-w-3xl mx-auto">
+     <div class="glow-border rounded-lg bg-cyber-mid/60 overflow-hidden"><button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-4 text-left text-cyan-200 font-medium hover:bg-cyan-900/20 transition"> <span>📖 Maksud Mikropengawal dan Mikropemproses</span> <i data-lucide="chevron-down" class="w-5 h-5 transition-transform"></i> </button>
+      <div class="accordion-content px-4 pb-4 text-sm text-white-400">
+       <p><b><u>Mikropengawal (Microcontroller)</u></b> </p> <br> 
+	   <p><b>Definisi:</b> Peranti kawalan lengkap di mana semua komponen penting dibina di dalam satu cip tunggal.<br><b>Komponen Dalaman:</b> Dilengkapi CPU, RAM, ROM, dan port Input/Output (I/O).<br><b>Skala Aplikasi:</b> Sesuai untuk sistem spesifik dan tugas mudah. (Cth: Pintu pagar automatik, mesin basuh).</p>
+		<br><br>
+		<!-- b untuk bold, u untuk line, br untuk space , p utk pharagraph -->
+		<div class="text-center">
+		<img src="contoh mikropengawal.jpg" alt="Trulli" width="300" height="133" class="inline-block">
+		<br><br>
+		<p><i><b>CONTOH MIKROPENGAWAL PADA PAPAN LITAR ELEKTRONIK</p>
+		<p>DAN GAMBAR RAJAH BLOK MIKROPENGAWAL</b></i></p>
+		<!-- Reset text-align kepada left untuk teks selepasnya -->
+		<br>
+		 <div class="text-left">
+         <p class="mt-4"><strong><u>Mikropemproses (Microprocessor)</u></strong></p><br>
+         <p><b>Definisi:</b> Pemprosesan mikro dalam satu cip yang memerlukan sokongan cip-cip luaran untuk berfungsi.<br>
+         <b>Komponen Luaran:</b> Disokong cip Input, Output, RAM, dan ROM yang dihubungkan melalui System Bus.<br>
+         <b>Skala Aplikasi:</b> Digunakan dalam melakukan kawalan data yang besar dan pelbagai. (Cth: Komputer Peribadi dan server).</p>
+		 <br><br>
+		<!-- b untuk bold, u untuk line, br untuk space , p utk pharagraph -->
+		  <div class="text-center">
+		   <img src="contoh mikropemproses.jpg" alt="Trulli" width="300" height="133" class="inline-block">
+		   <p><i><b>CONTOH CIP MIKROPEMPROSES</p>
+		   <p>DAN GAMBAR RAJAH BLOK MIKROPEMPROSES</b></i></p>
+		  </div>
+	     </div>
+	    </div>
+	   </div>
+	 </div>
+     <div class="glow-border rounded-lg bg-cyber-mid/60 overflow-hidden"><button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-4 text-left text-cyan-200 font-medium hover:bg-cyan-900/20 transition"> <span>🔌 Bahagian-bahagian yang Terdapat dalam Mikropengawal (Microcontroller) </span> <i data-lucide="chevron-down" class="w-5 h-5 transition-transform"></i> </button>
+      <div class="accordion-content px-4 pb-4 text-sm text-white-400">
+       <p><b><u>Bahagian Input (Derianya): 👁️</u></b></p><br>
+	   <p><b>Peranan:</b> Menerima isyarat dari persekitaran.<br><b>Tugas:</b> Menghantar isyarat yang dikesan kepada Pusat Pemprosesan.</p>
+	   <br>
+	   <p><b><u>Bahagian Proses (Otaknya):</u></b></p><br>
+	   <p><b>Peranan:</b> Menilai isyarat yang diterima menggunakan Unit Pemprosesan Pusat (CPU).<br><b>Tugas:</b> Membaca memori (ROM/RAM) untuk membuat keputusan.</p>
+	   <br>
+	   <p><b><u>Bahagian Output (Tindak Balasnya):</u></b></p><br>
+	   <p><b>Peranan:</b> Menerima arahan dari otak (CPU) untuk bertindak.<br><b>Tugas:</b> Menghasilkan tindakan akhir seperti cahaya, bunyi, atau pergerakan fizikal.</p>
+	   <br><br>
+	   <div class="text-center">
+		<img src="blok bahagian utama dalam mikropengawal.jpg" alt="Trulli" width="300" height="133" class="inline-block">
+		<br><br>
+		<p><i><b>GAMBAR RAJAH BLOK BAHAGIAN UTAMA DALAM MIKROPENGAWAL</p>
+      </div>
+     </div>
+     <div class="glow-border rounded-lg bg-cyber-mid/60 overflow-hidden"><button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-4 text-left text-cyan-200 font-medium hover:bg-cyan-900/20 transition"> <span>💡 Pengaturcaraan Arduino</span> <i data-lucide="chevron-down" class="w-5 h-5 transition-transform"></i> </button>
+      <div class="accordion-content px-4 pb-4 text-sm text-gray-400">
+       <p>Nota pembelajaran akan dimasukkan di sini. Ruang untuk contoh kod dan penerangan pengaturcaraan.</p>
+      </div>
+     </div>
+	 <div class="glow-border rounded-lg bg-cyber-mid/60 overflow-hidden"><button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-4 text-left text-cyan-200 font-medium hover:bg-cyan-900/20 transition"> <span>💡 Pengaturcaraan Arduino</span> <i data-lucide="chevron-down" class="w-5 h-5 transition-transform"></i> </button>
+      <div class="accordion-content px-4 pb-4 text-sm text-gray-400">
+       <p>Nota pembelajaran akan dimasukkan di sini. Ruang untuk contoh kod dan penerangan pengaturcaraan.</p>
+      </div>
+     </div>
+    </div>
+   </div>
+
+ <!-- AR KOMPONEN -->
+ <section id="ar-components" class="py-20 px-4 bg-gradient-to-b from-cyber-dark to-cyber-mid">
+   <div class="max-w-6xl mx-auto">
+     <div class="text-center mb-12"><h2 class="font-orbitron text-3xl md:text-4xl font-bold text-white glow-text mb-4">🕶️ Realiti Terimbas (AR)</h2><p class="text-cyan-300/70">Klik pada kad komponen untuk melihat butiran elektronik interaktif.</p></div>
+     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+       <div class="ar-card flip-card h-80 cursor-pointer" onclick="showComponentDetail('Perintang (Resistor)', 'Komponen yang menentang aliran arus. Unit: Ohm (Ω). Gelang warna menentukan nilai rintangan.', '#FF6B6B')"><div class="flip-card-inner"><div class="flip-front glow-border rounded-xl bg-gradient-to-br from-cyber-mid to-cyber-dark p-6 flex flex-col items-center justify-center"><div class="w-24 h-24 rounded-full bg-amber-500/20 flex items-center justify-center mb-4"><span class="text-5xl">🔌</span></div><h3 class="font-orbitron text-xl font-bold text-amber-400">Perintang</h3><div class="mt-4 text-xs text-cyan-400/70">Klik untuk AR</div></div><div class="flip-back rounded-xl p-6 flex flex-col items-center justify-center" style="background: linear-gradient(135deg, #1a1a2e, #0a0e1a); border:1px solid #FF6B6B40;"><h4 class="font-bold text-amber-400">🔍 Butiran</h4><p class="text-xs text-gray-300 text-center">Kawal arus, bahagi voltan. Simbol: ~\/\/\/~</p></div></div></div>
+       <div class="ar-card flip-card h-80 cursor-pointer" onclick="showComponentDetail('LED', 'Diod pemancar cahaya. Kaki panjang (+) anod, pendek katod (-).', '#22d3ee')"><div class="flip-card-inner"><div class="flip-front glow-border rounded-xl bg-gradient-to-br from-cyber-mid to-cyber-dark p-6 flex flex-col items-center justify-center"><div class="w-24 h-24 rounded-full bg-cyan-500/20 flex items-center justify-center mb-4 animate-pulse"><span class="text-5xl">💡</span></div><h3 class="font-orbitron text-xl font-bold text-cyan-400">LED</h3></div><div class="flip-back rounded-xl p-6 flex flex-col items-center justify-center" style="background: linear-gradient(135deg,#1a1a2e,#0a0e1a);border:1px solid #22d3ee40;"><h4 class="font-bold text-cyan-400">🔍 Butiran</h4><p class="text-xs">Menukar elektrik kepada cahaya. Guna perintang 220Ω.</p></div></div></div>
+       <div class="ar-card flip-card h-80 cursor-pointer" onclick="showComponentDetail('Transistor', 'Suis elektronik atau penguat. 3 terminal: Base (B), Collector (C), Emitter (E).', '#a855f7')"><div class="flip-card-inner"><div class="flip-front glow-border rounded-xl bg-gradient-to-br from-cyber-mid to-cyber-dark p-6 flex flex-col items-center justify-center"><div class="w-24 h-24 rounded-full bg-purple-500/20 flex items-center justify-center mb-4"><span class="text-5xl">🔘</span></div><h3 class="font-orbitron text-xl font-bold text-purple-400">Transistor</h3></div><div class="flip-back rounded-xl p-6 flex flex-col items-center justify-center" style="background: linear-gradient(135deg,#1a1a2e,#0a0e1a);border:1px solid #a855f740;"><h4 class="font-bold text-purple-400">🔍 Butiran</h4><p class="text-xs">Jenis NPN & PNP. Digunakan dalam litar penguat dan suis.</p></div></div></div>
+       <div class="ar-card flip-card h-80 cursor-pointer" onclick="showComponentDetail('Kapasitor', 'Menyimpan tenaga elektrik dalam medan elektrik. Unit: Farad (F).', '#fbbf24')"><div class="flip-card-inner"><div class="flip-front glow-border rounded-xl bg-gradient-to-br from-cyber-mid to-cyber-dark p-6 flex flex-col items-center justify-center"><div class="w-24 h-24 rounded-full bg-yellow-500/20 flex items-center justify-center mb-4"><span class="text-5xl">⚡</span></div><h3 class="font-orbitron text-xl font-bold text-yellow-400">Kapasitor</h3></div><div class="flip-back rounded-xl p-6 flex flex-col items-center justify-center" style="background: linear-gradient(135deg,#1a1a2e,#0a0e1a);border:1px solid #fbbf2440;"><h4 class="font-bold text-yellow-400">🔍 Butiran</h4><p class="text-xs">Kegunaan: penapis, pemasaan, penyimpan cas sementara.</p></div></div></div>
+       <div class="ar-card flip-card h-80 cursor-pointer" onclick="showComponentDetail('Diod', 'Membenarkan arus mengalir satu arah sahaja. Simbol ▶|', '#ec4899')"><div class="flip-card-inner"><div class="flip-front glow-border rounded-xl bg-gradient-to-br from-cyber-mid to-cyber-dark p-6 flex flex-col items-center justify-center"><div class="w-24 h-24 rounded-full bg-pink-500/20 flex items-center justify-center mb-4"><span class="text-5xl">➡️</span></div><h3 class="font-orbitron text-xl font-bold text-pink-400">Diod</h3></div><div class="flip-back rounded-xl p-6 flex flex-col items-center justify-center" style="background: linear-gradient(135deg,#1a1a2e,#0a0e1a);border:1px solid #ec489940;"><h4 class="font-bold text-pink-400">🔍 Butiran</h4><p class="text-xs">Penerus, pelindung litar, penukar AC ke DC.</p></div></div></div>
+       <div class="ar-card flip-card h-80 cursor-pointer" onclick="showComponentDetail('Litar Bersepadu (IC)', 'Cip mikro yang mengandungi ribuan komponen. Contoh: mikropengawal.', '#10b981')"><div class="flip-card-inner"><div class="flip-front glow-border rounded-xl bg-gradient-to-br from-cyber-mid to-cyber-dark p-6 flex flex-col items-center justify-center"><div class="w-24 h-24 rounded-full bg-emerald-500/20 flex items-center justify-center mb-4"><span class="text-5xl">🧠</span></div><h3 class="font-orbitron text-xl font-bold text-emerald-400">IC</h3></div><div class="flip-back rounded-xl p-6 flex flex-col items-center justify-center" style="background: linear-gradient(135deg,#1a1a2e,#0a0e1a);border:1px solid #10b98140;"><h4 class="font-bold text-emerald-400">🔍 Butiran</h4><p class="text-xs">Pengawal, pemproses, penguat operasi. Takuk menandakan pin 1.</p></div></div></div>
+     </div>
+   </div>
+ </section>
+
+ <!-- Kuiz Interaktif -->
+ <section id="kuiz" class="py-20 px-4 bg-gradient-to-b from-cyber-dark to-cyber-mid">
+   <div class="max-w-3xl mx-auto">
+     <h2 class="font-orbitron text-3xl md:text-4xl font-bold text-center text-white glow-text mb-4">🎮 Kuiz Interaktif</h2>
+     <div id="quiz-container" class="space-y-6"></div>
+     <div id="quiz-result" class="hidden mt-8 text-center glow-border rounded-xl bg-cyber-mid/80 p-8"><div class="text-5xl mb-4">🏆</div><h3 class="font-orbitron text-2xl font-bold text-cyan-300 mb-2">Keputusan Anda</h3><p id="quiz-score" class="text-4xl font-bold text-white"></p><button onclick="resetQuiz()" class="mt-6 bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 px-6 py-2 rounded-full">Cuba Lagi</button></div>
+   </div>
+ </section>
+
+ <!-- Crossword dengan implementasi ringkas (dipadatkan) -->
+ <section id="crossword" class="py-20 px-4 bg-gradient-to-b from-cyber-mid to-cyber-dark">
+   <div class="max-w-6xl mx-auto text-center"><h2 class="font-orbitron text-3xl font-bold glow-text mb-6">⚡ SILANG KATA ELEKTRONIK</h2>
+     <div id="crossword-grid" class="crossword-grid"></div>
+     <div class="flex flex-wrap justify-center gap-4 mt-6">
+       <button onclick="checkCrosswordFinal()" class="bg-cyan-600/30 border border-cyan-400 px-5 py-2 rounded-full">✅ Semak Jawapan</button>
+       <button onclick="resetCrosswordFinal()" class="bg-gray-700/50 border border-cyan-500/40 px-5 py-2 rounded-full">🔄 Reset</button>
+       <button onclick="showCrosswordAnswersFinal()" class="bg-purple-700/40 border border-purple-400 px-5 py-2 rounded-full">📖 Lihat Jawapan</button>
+     </div>
+     <div id="crossword-result" class="hidden mt-6 p-4 border rounded-xl border-cyan-500/40 bg-cyber-mid/60"></div>
+   </div>
+ </section>
+
+ <footer id="footer" class="border-t border-cyan-900/30 py-12 px-4 bg-cyber-dark text-center"><div class="flex justify-center gap-4 mb-4"><i data-lucide="cpu" class="text-cyan-400"></i><i data-lucide="zap" class="text-cyan-400"></i></div><p class="text-gray-400 text-sm">Hak Cipta © 2026 — Reka Bentuk Elektronik RBT T2</p></footer>
+
+ <!-- AI CHATBOT (sudut kanan bawah) -->
+ <div class="chatbot-container" id="chatbotContainer">
+   <div id="chatbotToggle" class="chatbot-toggle">
+     <i data-lucide="message-circle" class="w-8 h-8 text-white"></i>
+   </div>
+   <div id="chatbotWindow" class="chatbot-window" style="display: none;">
+     <div class="chatbot-header">
+       <span>🤖 Mentor Elektronik AI</span>
+       <button id="closeChatBtn" style="background: none; border: none; color:#00d4ff; cursor:pointer;"><i data-lucide="x" class="w-5 h-5"></i></button>
+     </div>
+     <div id="chatMessages" class="chat-messages">
+       <div class="message bot-msg">👋 Hai! Saya AI pembantu elektronik. Tanya apa-apa tentang mikropengawal, perintang, LED, litar Arduino, atau komponen. 😊</div>
+     </div>
+     <div class="chat-input-area">
+       <input type="text" id="chatInput" placeholder="Tanya soalan elektronik...">
+       <button id="sendChatBtn">Hantar</button>
+     </div>
+   </div>
+ </div>
+
+ <script>
+   // Global quiz,accordion, AR, dan chatbot
+   const quizData = [
+     { question: "Apakah fungsi utama perintang (resistor) dalam litar elektronik?", options: ["Menyimpan tenaga", "Menghasilkan cahaya", "Menghadkan aliran arus", "Menguatkan isyarat"], correct: 2 },
+     { question: "Komponen manakah yang membenarkan arus mengalir dalam satu arah sahaja?", options: ["Perintang", "Kapasitor", "Transistor", "Diod"], correct: 3 },
+     { question: "Apakah unit ukuran bagi kapasitans?", options: ["Ohm", "Volt", "Farad", "Ampere"], correct: 2 },
+     { question: "Berapakah bilangan terminal yang terdapat pada transistor asas?", options: ["2", "3", "4", "5"], correct: 1 },
+     { question: "Apakah fungsi utama LED?", options: ["Menyimpan data", "Menghasilkan bunyi", "Memancarkan cahaya", "Mengesan haba"], correct: 2 }
+   ];
+   let userAnswers = {};
+
+   function renderQuiz() {
+     const container = document.getElementById('quiz-container');
+     if(!container) return;
+     container.innerHTML = quizData.map((q, i) => `<div class="glow-border rounded-xl bg-cyber-mid/80 p-6"><p class="font-bold text-cyan-200 mb-3">S${i+1}. ${q.question}</p><div class="space-y-2">${q.options.map((opt, j) => `<button onclick="selectAnswer(${i}, ${j}, this)" class="quiz-opt-${i} w-full text-left px-4 py-2 rounded-lg border border-cyan-800/30 bg-cyber-dark/50 text-gray-300 hover:border-cyan-400">${String.fromCharCode(65+j)}. ${opt}</button>`).join('')}</div></div>`).join('');
+   }
+   window.selectAnswer = function(qIndex, aIndex, btn) {
+     userAnswers[qIndex] = aIndex;
+     document.querySelectorAll(`.quiz-opt-${qIndex}`).forEach(b => b.classList.remove('border-cyan-400','bg-cyan-500/20','text-white'));
+     btn.classList.add('border-cyan-400','bg-cyan-500/20','text-white');
+     if(Object.keys(userAnswers).length === quizData.length) showQuizResult();
+   };
+   function showQuizResult() {
+     let score = 0;
+     quizData.forEach((q,i) => { if(userAnswers[i] === q.correct) score++; });
+     document.getElementById('quiz-score').innerHTML = `${score} / ${quizData.length}`;
+     document.getElementById('quiz-result').classList.remove('hidden');
+   }
+   window.resetQuiz = function() { userAnswers = {}; document.getElementById('quiz-result').classList.add('hidden'); renderQuiz(); };
+
+   // AR popup
+   window.showComponentDetail = function(name, desc, color) {
+     const modal = document.createElement('div');
+     modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm';
+     modal.innerHTML = `<div class="glow-border rounded-2xl bg-cyber-mid/95 p-8 max-w-md mx-4 text-center" style="border-top-color:${color};border-top-width:4px;"><h3 class="font-orbitron text-2xl font-bold mb-3" style="color:${color}">${name}</h3><p class="text-gray-300 text-sm leading-relaxed mb-6">${desc}</p><button onclick="this.closest('.fixed').remove()" class="px-6 py-2 rounded-full bg-cyan-500/20 border border-cyan-500/40 text-cyan-300">Tutup</button></div>`;
+     document.body.appendChild(modal);
+     modal.addEventListener('click', (e) => { if(e.target === modal) modal.remove(); });
+   };
+
+   // Accordion
+   window.toggleAccordion = function(btn) { const content = btn.nextElementSibling; content.classList.toggle('open'); const icon = btn.querySelector('[data-lucide]'); if(icon) icon.style.transform = content.classList.contains('open') ? 'rotate(180deg)' : ''; };
+
+   // Crossword sederhana (grid 11x11)
+   const crosswordGridDef = [
+     [1,2,3,4,5,6,7,8,0,0,0],[0,9,0,0,0,0,0,0,0,0,0],[0,10,0,0,11,12,13,14,15,16,17],[0,18,0,0,0,0,0,0,0,0,0],[0,19,20,21,22,23,24,25,0,26,27],[0,28,0,0,0,0,0,0,0,0,0],[0,29,0,0,30,31,32,33,34,35,36],[0,37,0,0,0,0,0,0,0,0,0],[0,38,39,40,41,42,43,44,0,45,46],[0,47,0,0,0,0,0,0,0,0,0],[48,49,50,51,52,53,54,55,56,57,58]
+   ];
+   const crosswordAnswers = {1:'R',2:'E',3:'S',4:'I',5:'S',6:'T',7:'O',8:'R',9:'L',18:'E',28:'D',11:'K',12:'A',13:'P',14:'A',15:'S',16:'I',17:'T',26:'O',27:'R',10:'D',19:'I',20:'O',21:'D',30:'T',31:'R',32:'A',33:'N',34:'S',35:'I',36:'S',38:'T',39:'O',40:'R',48:'B',49:'A',50:'T',51:'E',52:'R',53:'I',54:'V',55:'O',56:'L',57:'T',58:'A' };
+   let crosswordInputs = [];
+
+   function buildCrosswordGrid() {
+     const container = document.getElementById('crossword-grid');
+     if(!container) return;
+     container.innerHTML = '';
+     for(let r=0; r<11; r++) {
+       for(let c=0; c<11; c++) {
+         const val = crosswordGridDef[r][c];
+         const cell = document.createElement('input');
+         cell.type = 'text';
+         cell.maxLength = 1;
+         cell.classList.add('crossword-cell');
+         if(val === 0) { cell.classList.add('black'); cell.disabled = true; cell.readOnly = true; }
+         else { cell.dataset.row=r; cell.dataset.col=c; cell.dataset.num=val; cell.addEventListener('input', e => { e.target.value = e.target.value.toUpperCase(); }); }
+         container.appendChild(cell);
+       }
+     }
+     crosswordInputs = document.querySelectorAll('#crossword-grid .crossword-cell:not(.black)');
+   }
+   window.checkCrosswordFinal = function() {
+     let correct=0, total=0;
+     for(let r=0;r<11;r++){ for(let c=0;c<11;c++){ const cell = document.querySelector(`#crossword-grid .crossword-cell[data-row="${r}"][data-col="${c}"]`); if(cell && !cell.classList.contains('black')){ total++; const num = crosswordGridDef[r][c]; const expected = crosswordAnswers[num]; const val = cell.value.toUpperCase(); if(expected && val === expected){ correct++; cell.classList.add('correct'); } else cell.classList.remove('correct'); } } }
+     const resultDiv = document.getElementById('crossword-result');
+     resultDiv.classList.remove('hidden');
+     resultDiv.innerHTML = correct === total ? `🎉 Tahniah! ${correct}/${total} betul. Hebat! 🎉` : `📊 ${correct}/${total} jawapan betul. Terus belajar!`;
+   };
+   window.resetCrosswordFinal = function() {
+     document.querySelectorAll('#crossword-grid .crossword-cell:not(.black)').forEach(cell => { cell.value = ''; cell.classList.remove('correct'); });
+     document.getElementById('crossword-result').classList.add('hidden');
+   };
+   window.showCrosswordAnswersFinal = function() {
+     for(let r=0;r<11;r++){ for(let c=0;c<11;c++){ const cell = document.querySelector(`#crossword-grid .crossword-cell[data-row="${r}"][data-col="${c}"]`); if(cell && !cell.classList.contains('black')){ const num = crosswordGridDef[r][c]; const ans = crosswordAnswers[num]; if(ans){ cell.value = ans; cell.classList.add('correct'); } } } }
+     document.getElementById('crossword-result').classList.remove('hidden');
+     document.getElementById('crossword-result').innerHTML = "📘 Mod pembelajaran: Jawapan telah diisi. Tekan Reset untuk uji diri.";
+   };
+   buildCrosswordGrid();
+   renderQuiz();
+   lucide.createIcons();
+
+   // ---------- AI CHATBOT (rule-based pintar tentang elektronik) ----------
+   const chatMessagesDiv = document.getElementById('chatMessages');
+   const chatInput = document.getElementById('chatInput');
+   const sendBtn = document.getElementById('sendChatBtn');
+   const toggleBtn = document.getElementById('chatbotToggle');
+   const windowDiv = document.getElementById('chatbotWindow');
+   const closeBtn = document.getElementById('closeChatBtn');
+
+   function botResponse(userMsg) {
+     const msg = userMsg.toLowerCase();
+     if(msg.includes('perintang') || msg.includes('resistor')) return "Perintang (resistor) menghadkan aliran arus dalam litar. Unitnya ialah Ohm (Ω). Gelang warna menunjukkan nilai rintangan.";
+     if(msg.includes('led')) return "LED (Light Emitting Diode) mengeluarkan cahaya apabila arus mengalir. Kaki panjang (+) anod, pendek katod (-). Gunakan perintang 220Ω untuk melindunginya.";
+     if(msg.includes('transistor')) return "Transistor berfungsi sebagai suis elektronik atau penguat isyarat. Ia mempunyai 3 terminal: Base (B), Collector (C), Emitter (E). Jenis NPN & PNP.";
+     if(msg.includes('kapasitor') || msg.includes('capacitor')) return "Kapasitor menyimpan cas elektrik sementara. Unitnya Farad (F). Digunakan untuk penapis, pemasaan, dan penstabil voltan.";
+     if(msg.includes('diod')) return "Diod membenarkan arus mengalir satu arah sahaja. Simbol ▶|. Kegunaan: menukar AC ke DC (penerus) dan melindungi litar.";
+     if(msg.includes('mikropengawal') || msg.includes('microcontroller')) return "Mikropengawal adalah cip yang mengandungi CPU, RAM, ROM, dan I/O dalam satu cip. Contoh: Arduino Uno. Sesuai untuk kawalan automatik.";
+     if(msg.includes('mikropemproses') || msg.includes('microprocessor')) return "Mikropemproses hanya mengandungi CPU, memerlukan cip luaran seperti RAM dan ROM. Digunakan dalam komputer peribadi dan sistem kompleks.";
+     if(msg.includes('arduino')) return "Arduino adalah platform mikropengawal popular. Gunakan kod C++: void setup() { } void loop() { digitalWrite(13, HIGH); delay(1000); }";
+     if(msg.includes('komponen') || msg.includes('elektronik')) return "Komponen elektronik asas: perintang, LED, transistor, kapasitor, diod, litar bersepadu (IC), suis, dan bateri.";
+     if(msg.includes('litar') || msg.includes('circuit')) return "Litar elektronik adalah laluan lengkap bagi arus elektrik. Terdiri dari sumber kuasa, komponen, dan sambungan. Litar bersiri & selari.";
+     if(msg.includes('voltan')) return "Voltan (volt) adalah beza keupayaan elektrik yang mendorong arus mengalir. Unit: Volt (V).";
+     if(msg.includes('arus')) return "Arus elektrik adalah aliran cas elektron. Unit: Ampere (A).";
+     return "Saya tahu banyak tentang elektronik! Tanyalah tentang perintang, LED, transistor, kapasitor, mikropengawal, Arduino, litar, dan sebagainya. Contoh: 'Apa fungsi transistor?'";
+   }
+
+   function addMessage(text, isUser) {
+     const msgDiv = document.createElement('div');
+     msgDiv.className = `message ${isUser ? 'user-msg' : 'bot-msg'}`;
+     msgDiv.innerText = text;
+     chatMessagesDiv.appendChild(msgDiv);
+     chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+   }
+
+   function handleSend() {
+     const question = chatInput.value.trim();
+     if(!question) return;
+     addMessage(question, true);
+     chatInput.value = '';
+     setTimeout(() => {
+       const reply = botResponse(question);
+       addMessage(reply, false);
+     }, 200);
+   }
+
+   sendBtn.addEventListener('click', handleSend);
+   chatInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') handleSend(); });
+   toggleBtn.addEventListener('click', () => { windowDiv.style.display = windowDiv.style.display === 'none' ? 'flex' : 'none'; if(windowDiv.style.display === 'flex') lucide.createIcons(); });
+   closeBtn.addEventListener('click', () => { windowDiv.style.display = 'none'; });
+   windowDiv.style.display = 'none';
+   lucide.createIcons();
+
+   // Mobile nav
+   document.getElementById('mobile-menu-btn')?.addEventListener('click', () => document.getElementById('mobile-nav')?.classList.toggle('hidden'));
+   document.querySelectorAll('#mobile-nav a')?.forEach(a => a.addEventListener('click', () => document.getElementById('mobile-nav')?.classList.add('hidden')));
+ </script>
+</body>
+</html>
